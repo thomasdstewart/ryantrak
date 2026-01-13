@@ -34,8 +34,8 @@ jobs:
             --headless \
             --origin STN \
             --destination BGY \
-            --depart-date 2024-08-22 \
-            --return-date 2024-09-04 \
+            --depart-date 2026-08-22 \
+            --return-date 2026-09-04 \
             --currency GBP \
             --csv-path data/flight_prices.csv \
             --log-path logs/ryanair_scrape.log \

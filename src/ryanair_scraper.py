@@ -29,6 +29,8 @@ CSV_HEADERS = [
     "destination",
     "depart_date",
     "return_date",
+    "depart_time",
+    "return_time",
     "price",
     "currency",
     "status",
@@ -65,6 +67,15 @@ class SearchConfig:
             f"&isDomestic=false&isReturn=true"
             f"&currency={self.currency}"
         )
+
+
+@dataclass(frozen=True)
+class FlightOption:
+    price: Optional[str]
+    depart_time: str
+    return_time: str
+    currency: str
+    status: str
 
 
 class RyanairScraper:
@@ -137,11 +148,57 @@ class RyanairScraper:
                 logging.exception("Failed to accept cookies banner")
                 return
 
-    def fetch_return_price(self, config: SearchConfig) -> tuple[Optional[str], str, str]:
-        """Fetch return price from Ryanair booking flow.
+    def _extract_text(
+        self,
+        element: webdriver.remote.webelement.WebElement,
+        selectors: tuple[tuple[By, str], ...],
+    ) -> str:
+        for by, selector in selectors:
+            try:
+                target = element.find_element(by, selector)
+            except WebDriverException:
+                continue
+            text = target.text.strip()
+            if text:
+                return text
+        return ""
 
-        Returns a tuple: (price, currency, status)
-        """
+    def _extract_times(
+        self,
+        element: webdriver.remote.webelement.WebElement,
+        selectors: tuple[tuple[By, str], ...],
+    ) -> list[str]:
+        for by, selector in selectors:
+            try:
+                targets = element.find_elements(by, selector)
+            except WebDriverException:
+                continue
+            times = [target.text.strip() for target in targets if target.text.strip()]
+            if times:
+                return times
+        return []
+
+    def _locate_flight_cards(
+        self, wait: WebDriverWait
+    ) -> list[webdriver.remote.webelement.WebElement]:
+        selectors: tuple[tuple[By, str], ...] = (
+            (By.CSS_SELECTOR, "[data-ref='flight-card']"),
+            (By.CSS_SELECTOR, "[data-testid='flight-card']"),
+            (By.CSS_SELECTOR, ".flight-card"),
+            (By.CSS_SELECTOR, "[data-ref='flight-card-container']"),
+        )
+        for by, selector in selectors:
+            try:
+                wait.until(EC.presence_of_element_located((by, selector)))
+            except TimeoutException:
+                continue
+            cards = self.driver.find_elements(by, selector)
+            if cards:
+                return cards
+        return []
+
+    def fetch_return_flights(self, config: SearchConfig) -> list[FlightOption]:
+        """Fetch return flight options from Ryanair booking flow."""
         search_url = config.to_search_url()
         logging.info("Navigating to %s", search_url)
         try:
@@ -149,28 +206,95 @@ class RyanairScraper:
         except TimeoutException:
             logging.warning("Timeout while loading the search URL")
             self._save_debug_artifacts("timeout")
-            return None, config.currency, "timeout"
+            return [
+                FlightOption(
+                    price=None,
+                    depart_time="",
+                    return_time="",
+                    currency=config.currency,
+                    status="timeout",
+                )
+            ]
 
         try:
             wait = WebDriverWait(self.driver, self.timeout)
             self._accept_cookies()
 
-            # TODO: Update selectors if Ryanair changes their DOM structure.
-            price_selector = "[data-ref='price']"
-            price_element = wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, price_selector))
+            flight_cards = self._locate_flight_cards(wait)
+
+            price_selectors: tuple[tuple[By, str], ...] = (
+                (By.CSS_SELECTOR, "[data-ref='price']"),
+                (By.CSS_SELECTOR, "[data-testid='price']"),
+                (By.CSS_SELECTOR, ".price"),
             )
-            price_text = price_element.text.strip()
-            logging.info("Found price text: %s", price_text)
-            return price_text, config.currency, "ok"
+            time_selectors: tuple[tuple[By, str], ...] = (
+                (By.CSS_SELECTOR, "[data-ref='flight-time']"),
+                (By.CSS_SELECTOR, "[data-testid='flight-time']"),
+                (By.CSS_SELECTOR, ".flight-card__time"),
+                (By.CSS_SELECTOR, ".flight-time"),
+                (By.CSS_SELECTOR, ".flight-info__hour"),
+            )
+
+            if not flight_cards:
+                price_element = wait.until(
+                    EC.visibility_of_element_located(
+                        (By.CSS_SELECTOR, price_selectors[0][1])
+                    )
+                )
+                price_text = price_element.text.strip()
+                logging.info("Found price text: %s", price_text)
+                return [
+                    FlightOption(
+                        price=price_text,
+                        depart_time="",
+                        return_time="",
+                        currency=config.currency,
+                        status="ok",
+                    )
+                ]
+
+            options: list[FlightOption] = []
+            for card in flight_cards:
+                price_text = self._extract_text(card, price_selectors)
+                time_texts = self._extract_times(card, time_selectors)
+                depart_time = time_texts[0] if len(time_texts) > 0 else ""
+                return_time = time_texts[1] if len(time_texts) > 1 else ""
+                status = "ok" if price_text else "missing-price"
+                options.append(
+                    FlightOption(
+                        price=price_text or None,
+                        depart_time=depart_time,
+                        return_time=return_time,
+                        currency=config.currency,
+                        status=status,
+                    )
+                )
+            logging.info("Found %s flight options", len(options))
+            return options
         except TimeoutException:
             logging.warning("Timed out waiting for price element")
             self._save_debug_artifacts("missing-price")
-            return None, config.currency, "missing-price"
+            return [
+                FlightOption(
+                    price=None,
+                    depart_time="",
+                    return_time="",
+                    currency=config.currency,
+                    status="missing-price",
+                )
+            ]
         except WebDriverException:
             logging.exception("WebDriver error while extracting price")
             self._save_debug_artifacts("webdriver-error")
-            return None, config.currency, "webdriver-error"
+            return [
+                FlightOption(
+                    price=None,
+                    depart_time="",
+                    return_time="",
+                    currency=config.currency,
+                    status="webdriver-error",
+                )
+            ]
 
 
 def configure_logging(log_path: Path, verbose: bool) -> None:
@@ -239,20 +363,23 @@ def main() -> int:
     timestamp = dt.datetime.utcnow().replace(microsecond=0).isoformat()
 
     try:
-        price, currency, status = scraper.fetch_return_price(config)
-        row = {
-            "timestamp_utc": timestamp,
-            "origin": config.origin,
-            "destination": config.destination,
-            "depart_date": config.depart_date,
-            "return_date": config.return_date,
-            "price": price or "",
-            "currency": currency,
-            "status": status,
-            "notes": "",
-        }
-        append_csv(Path(args.csv_path), row)
-        logging.info("Appended row to %s", args.csv_path)
+        flights = scraper.fetch_return_flights(config)
+        for flight in flights:
+            row = {
+                "timestamp_utc": timestamp,
+                "origin": config.origin,
+                "destination": config.destination,
+                "depart_date": config.depart_date,
+                "return_date": config.return_date,
+                "depart_time": flight.depart_time,
+                "return_time": flight.return_time,
+                "price": flight.price or "",
+                "currency": flight.currency,
+                "status": flight.status,
+                "notes": "",
+            }
+            append_csv(Path(args.csv_path), row)
+        logging.info("Appended %s rows to %s", len(flights), args.csv_path)
     finally:
         scraper.close()
 

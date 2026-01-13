@@ -107,6 +107,36 @@ class RyanairScraper:
         except WebDriverException:
             logging.exception("Failed to write debug artifacts")
 
+    def _accept_cookies(self) -> None:
+        selectors: tuple[tuple[By, str], ...] = (
+            (By.CSS_SELECTOR, "button[data-ref='cookie.accept-all']"),
+            (By.CSS_SELECTOR, "button[data-ref='cookie.popup.accept-all']"),
+            (By.CSS_SELECTOR, "button[data-testid='accept-all-cookies']"),
+            (By.CSS_SELECTOR, "button#cookie-popup-with-overlay-accept"),
+            (
+                By.XPATH,
+                "//button[contains(translate(.,"
+                " 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),"
+                " 'accept')"
+                " and contains(translate(.,"
+                " 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),"
+                " 'cookie')]",
+            ),
+        )
+        for by, selector in selectors:
+            try:
+                button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((by, selector))
+                )
+                button.click()
+                logging.info("Accepted cookies banner using selector: %s", selector)
+                return
+            except TimeoutException:
+                continue
+            except WebDriverException:
+                logging.exception("Failed to accept cookies banner")
+                return
+
     def fetch_return_price(self, config: SearchConfig) -> tuple[Optional[str], str, str]:
         """Fetch return price from Ryanair booking flow.
 
@@ -123,6 +153,7 @@ class RyanairScraper:
 
         try:
             wait = WebDriverWait(self.driver, self.timeout)
+            self._accept_cookies()
 
             # TODO: Update selectors if Ryanair changes their DOM structure.
             price_selector = "[data-ref='price']"

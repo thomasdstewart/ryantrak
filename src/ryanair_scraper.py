@@ -200,8 +200,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Track Ryanair return flight prices.")
     parser.add_argument("--origin", default="STN", help="Origin airport IATA code")
     parser.add_argument("--destination", default="BGY", help="Destination IATA code")
-    parser.add_argument("--depart-date", default="2024-08-22", help="Departure date")
-    parser.add_argument("--return-date", default="2024-09-04", help="Return date")
+    parser.add_argument("--depart-date", default="2026-08-22", help="Departure date")
+    parser.add_argument("--return-date", default="2026-09-04", help="Return date")
     parser.add_argument("--currency", default="GBP", help="Currency to display")
     parser.add_argument(
         "--csv-path", default="data/flight_prices.csv", help="CSV output path"

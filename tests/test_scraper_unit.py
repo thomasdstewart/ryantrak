@@ -63,14 +63,11 @@ def test_append_csv_writes_header_once(tmp_path: Path) -> None:
             "timestamp_utc": "2024-01-01T00:00:00",
             "origin": "STN",
             "destination": "BGY",
-            "depart_date": "2024-08-22",
-            "return_date": "2024-09-04",
-            "depart_time": "06:30",
-            "return_time": "08:45",
+            "departure_date": "2024-08-22T06:30",
+            "arrival_date": "2024-08-22T08:45",
             "price": "£123.45",
             "currency": "GBP",
             "status": "ok",
-            "notes": "",
         },
     )
     append_csv(
@@ -79,18 +76,15 @@ def test_append_csv_writes_header_once(tmp_path: Path) -> None:
             "timestamp_utc": "2024-01-02T00:00:00",
             "origin": "STN",
             "destination": "BGY",
-            "depart_date": "2024-08-22",
-            "return_date": "2024-09-04",
-            "depart_time": "12:10",
-            "return_time": "14:25",
+            "departure_date": "2024-08-22T12:10",
+            "arrival_date": "2024-08-22T14:25",
             "price": "£156.00",
             "currency": "GBP",
             "status": "ok",
-            "notes": "",
         },
     )
 
     lines = csv_path.read_text(encoding="utf-8").splitlines()
 
-    assert lines[0].startswith("timestamp_utc,origin,destination,depart_date")
+    assert lines[0].startswith("timestamp_utc,origin,destination,departure_date")
     assert len(lines) == 3

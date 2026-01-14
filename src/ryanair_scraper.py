@@ -11,6 +11,7 @@ import argparse
 import csv
 import datetime as dt
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -200,6 +201,23 @@ class RyanairScraper:
                     return text
         return ""
 
+    @staticmethod
+    def _extract_price_from_text(text: str) -> str:
+        cleaned = RyanairScraper._clean_text(text)
+        if not cleaned:
+            return ""
+        patterns = (
+            r"(£|€|\$)\s*\d+(?:[.,]\d{2})?",
+            r"\d+(?:[.,]\d{2})?\s*(£|€|\$)",
+            r"\b(?:GBP|EUR|USD)\s*\d+(?:[.,]\d{2})?\b",
+            r"\d+(?:[.,]\d{2})?\s*(?:GBP|EUR|USD)\b",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, cleaned)
+            if match:
+                return match.group(0).strip()
+        return ""
+
     def _extract_times(
         self,
         element: webdriver.remote.webelement.WebElement,
@@ -279,6 +297,15 @@ class RyanairScraper:
 
             if not flight_cards:
                 price_text = self._extract_page_text(wait, price_selectors)
+                if not price_text:
+                    try:
+                        body = self.driver.find_element(By.TAG_NAME, "body")
+                    except WebDriverException:
+                        body = None
+                    if body is not None:
+                        price_text = self._extract_price_from_text(
+                            self._extract_element_text(body)
+                        )
                 logging.info("Found price text: %s", price_text)
                 return [
                     FlightOption(
@@ -293,6 +320,10 @@ class RyanairScraper:
             options: list[FlightOption] = []
             for card in flight_cards:
                 price_text = self._extract_text(card, price_selectors)
+                if not price_text:
+                    price_text = self._extract_price_from_text(
+                        self._extract_element_text(card)
+                    )
                 time_texts = self._extract_times(card, time_selectors)
                 depart_time = time_texts[0] if len(time_texts) > 0 else ""
                 return_time = time_texts[1] if len(time_texts) > 1 else ""

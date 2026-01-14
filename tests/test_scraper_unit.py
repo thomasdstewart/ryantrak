@@ -46,6 +46,14 @@ def test_extract_element_text_prefers_first_non_empty() -> None:
     assert scraper._extract_element_text(element) == "£199.99"
 
 
+def test_extract_price_from_text_matches_currency() -> None:
+    assert RyanairScraper._extract_price_from_text("Fly now for £19.99!") == "£19.99"
+    assert (
+        RyanairScraper._extract_price_from_text("Total price 24.50 EUR")
+        == "24.50 EUR"
+    )
+
+
 def test_append_csv_writes_header_once(tmp_path: Path) -> None:
     csv_path = tmp_path / "prices.csv"
 

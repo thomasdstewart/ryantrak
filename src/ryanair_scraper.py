@@ -463,10 +463,13 @@ def main() -> int:
     try:
         flights = scraper.fetch_return_flights(config)
         for flight in flights:
+            is_return_leg = flight.flight_date == config.return_date
+            origin = config.destination if is_return_leg else config.origin
+            destination = config.origin if is_return_leg else config.destination
             row = {
                 "timestamp_utc": timestamp,
-                "origin": config.origin,
-                "destination": config.destination,
+                "origin": origin,
+                "destination": destination,
                 "departure_date": format_flight_datetime(
                     flight.flight_date, flight.depart_time
                 ),

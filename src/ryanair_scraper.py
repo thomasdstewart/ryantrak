@@ -28,8 +28,8 @@ CSV_HEADERS = [
     "timestamp_utc",
     "origin",
     "destination",
-    "date",
-    "time",
+    "departure_date",
+    "arrival_date",
     "price",
     "currency",
     "status",
@@ -393,6 +393,12 @@ def append_csv(csv_path: Path, row: dict[str, str]) -> None:
         writer.writerow(row)
 
 
+def format_flight_datetime(date_str: str, time_str: str) -> str:
+    if time_str:
+        return f"{date_str}T{time_str}"
+    return date_str
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Track Ryanair return flight prices.")
     parser.add_argument("--origin", default="STN", help="Origin airport IATA code")
@@ -442,8 +448,12 @@ def main() -> int:
                 "timestamp_utc": timestamp,
                 "origin": config.origin,
                 "destination": config.destination,
-                "date": config.depart_date,
-                "time": flight.depart_time,
+                "departure_date": format_flight_datetime(
+                    config.depart_date, flight.depart_time
+                ),
+                "arrival_date": format_flight_datetime(
+                    config.depart_date, flight.return_time
+                ),
                 "price": flight.price or "",
                 "currency": flight.currency,
                 "status": flight.status,

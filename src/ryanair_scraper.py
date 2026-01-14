@@ -74,6 +74,7 @@ class FlightOption:
     return_time: str
     currency: str
     status: str
+    flight_date: str
 
 
 class RyanairScraper:
@@ -265,6 +266,7 @@ class RyanairScraper:
                     return_time="",
                     currency=config.currency,
                     status="timeout",
+                    flight_date=config.depart_date,
                 )
             ]
 
@@ -311,6 +313,7 @@ class RyanairScraper:
                         return_time="",
                         currency=config.currency,
                         status="ok" if price_text else "missing-price",
+                        flight_date=config.depart_date,
                     )
                 ]
 
@@ -332,16 +335,30 @@ class RyanairScraper:
                         return_time=return_time,
                         currency=config.currency,
                         status=status,
+                        flight_date=config.depart_date,
                     )
                 )
             if len(options) > 1 and len(options) % 2 == 0:
                 midpoint = len(options) // 2
                 logging.info(
-                    "Detected %s total options; using first %s outbound results",
+                    "Detected %s total options; assigning %s outbound and %s return results",
                     len(options),
                     midpoint,
+                    len(options) - midpoint,
                 )
-                options = options[:midpoint]
+                options = [
+                    FlightOption(
+                        price=option.price,
+                        depart_time=option.depart_time,
+                        return_time=option.return_time,
+                        currency=option.currency,
+                        status=option.status,
+                        flight_date=(
+                            config.depart_date if idx < midpoint else config.return_date
+                        ),
+                    )
+                    for idx, option in enumerate(options)
+                ]
             logging.info("Found %s flight options", len(options))
             return options
         except TimeoutException:
@@ -354,6 +371,7 @@ class RyanairScraper:
                     return_time="",
                     currency=config.currency,
                     status="missing-price",
+                    flight_date=config.depart_date,
                 )
             ]
         except WebDriverException:
@@ -366,6 +384,7 @@ class RyanairScraper:
                     return_time="",
                     currency=config.currency,
                     status="webdriver-error",
+                    flight_date=config.depart_date,
                 )
             ]
 
@@ -449,10 +468,10 @@ def main() -> int:
                 "origin": config.origin,
                 "destination": config.destination,
                 "departure_date": format_flight_datetime(
-                    config.depart_date, flight.depart_time
+                    flight.flight_date, flight.depart_time
                 ),
                 "arrival_date": format_flight_datetime(
-                    config.depart_date, flight.return_time
+                    flight.flight_date, flight.return_time
                 ),
                 "price": flight.price or "",
                 "currency": flight.currency,

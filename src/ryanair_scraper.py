@@ -148,6 +148,28 @@ class RyanairScraper:
                 logging.exception("Failed to accept cookies banner")
                 return
 
+    @staticmethod
+    def _clean_text(text: str) -> str:
+        return " ".join(text.split())
+
+    def _extract_element_text(
+        self, element: webdriver.remote.webelement.WebElement
+    ) -> str:
+        attributes = ("textContent", "innerText", "aria-label", "data-label")
+        candidates = [element.text]
+        for attribute in attributes:
+            try:
+                value = element.get_attribute(attribute)
+            except WebDriverException:
+                value = None
+            if value:
+                candidates.append(value)
+        for candidate in candidates:
+            cleaned = self._clean_text(candidate)
+            if cleaned:
+                return cleaned
+        return ""
+
     def _extract_text(
         self,
         element: webdriver.remote.webelement.WebElement,
@@ -158,9 +180,24 @@ class RyanairScraper:
                 target = element.find_element(by, selector)
             except WebDriverException:
                 continue
-            text = target.text.strip()
+            text = self._extract_element_text(target)
             if text:
                 return text
+        return ""
+
+    def _extract_page_text(
+        self, wait: WebDriverWait, selectors: tuple[tuple[By, str], ...]
+    ) -> str:
+        for by, selector in selectors:
+            try:
+                wait.until(EC.presence_of_element_located((by, selector)))
+            except TimeoutException:
+                continue
+            elements = self.driver.find_elements(by, selector)
+            for element in elements:
+                text = self._extract_element_text(element)
+                if text:
+                    return text
         return ""
 
     def _extract_times(
@@ -225,6 +262,11 @@ class RyanairScraper:
             price_selectors: tuple[tuple[By, str], ...] = (
                 (By.CSS_SELECTOR, "[data-ref='price']"),
                 (By.CSS_SELECTOR, "[data-testid='price']"),
+                (By.CSS_SELECTOR, "[data-testid='price-value']"),
+                (By.CSS_SELECTOR, "[data-testid='flight-price']"),
+                (By.CSS_SELECTOR, "[data-e2e='flight-price']"),
+                (By.CSS_SELECTOR, ".flight-card__price"),
+                (By.CSS_SELECTOR, ".flight-price"),
                 (By.CSS_SELECTOR, ".price"),
             )
             time_selectors: tuple[tuple[By, str], ...] = (
@@ -236,20 +278,15 @@ class RyanairScraper:
             )
 
             if not flight_cards:
-                price_element = wait.until(
-                    EC.visibility_of_element_located(
-                        (By.CSS_SELECTOR, price_selectors[0][1])
-                    )
-                )
-                price_text = price_element.text.strip()
+                price_text = self._extract_page_text(wait, price_selectors)
                 logging.info("Found price text: %s", price_text)
                 return [
                     FlightOption(
-                        price=price_text,
+                        price=price_text or None,
                         depart_time="",
                         return_time="",
                         currency=config.currency,
-                        status="ok",
+                        status="ok" if price_text else "missing-price",
                     )
                 ]
 

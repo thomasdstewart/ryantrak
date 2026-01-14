@@ -28,14 +28,11 @@ CSV_HEADERS = [
     "timestamp_utc",
     "origin",
     "destination",
-    "depart_date",
-    "return_date",
-    "depart_time",
-    "return_time",
+    "date",
+    "time",
     "price",
     "currency",
     "status",
-    "notes",
 ]
 
 
@@ -337,6 +334,14 @@ class RyanairScraper:
                         status=status,
                     )
                 )
+            if len(options) > 1 and len(options) % 2 == 0:
+                midpoint = len(options) // 2
+                logging.info(
+                    "Detected %s total options; using first %s outbound results",
+                    len(options),
+                    midpoint,
+                )
+                options = options[:midpoint]
             logging.info("Found %s flight options", len(options))
             return options
         except TimeoutException:
@@ -437,14 +442,11 @@ def main() -> int:
                 "timestamp_utc": timestamp,
                 "origin": config.origin,
                 "destination": config.destination,
-                "depart_date": config.depart_date,
-                "return_date": config.return_date,
-                "depart_time": flight.depart_time,
-                "return_time": flight.return_time,
+                "date": config.depart_date,
+                "time": flight.depart_time,
                 "price": flight.price or "",
                 "currency": flight.currency,
                 "status": flight.status,
-                "notes": "",
             }
             append_csv(Path(args.csv_path), row)
         logging.info("Appended %s rows to %s", len(flights), args.csv_path)

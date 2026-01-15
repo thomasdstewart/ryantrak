@@ -74,3 +74,18 @@ selector in `fetch_return_price()`.
 
 Once the CSV accumulates entries, you can graph it with pandas or a notebook
 (e.g., `pandas.read_csv(...).plot(...)`).
+
+## Generating charts in CI
+
+The `src/plot_flight_prices.py` script converts `data/flight_prices.csv` into
+PNG charts (one per unique origin/destination/departure time). The daily GitHub
+Actions workflow runs it and saves images under `data/charts` so you can
+inspect price changes over time without hosting a server.
+
+Run it locally:
+
+```bash
+python src/plot_flight_prices.py \
+  --csv-path data/flight_prices.csv \
+  --output-dir data/charts
+```

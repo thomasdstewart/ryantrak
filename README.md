@@ -2,7 +2,7 @@
 
 A lightweight Ryanair price tracker that runs daily in GitHub Actions and records
 prices to a CSV file. The initial configuration tracks **London Stansted (STN)**
-→ **Milan Bergamo (BGY)**, returning **22 Aug – 4 Sept 2024**, for 1 adult.
+→ **Milan Bergamo (BGY)**, returning **22 Aug – 4 Sept 2026**, for 1 adult.
 
 ## What it does
 
@@ -16,6 +16,7 @@ prices to a CSV file. The initial configuration tracks **London Stansted (STN)**
 ```
 .
 ├── .github/workflows/ryanair-daily.yml  # scheduled GitHub Action
+├── data/flight_dates.csv                # date pairs to query
 ├── data/flight_prices.csv               # time-series results
 ├── logs/                                # local logs (gitignored)
 ├── src/ryanair_scraper.py               # Selenium scraper
@@ -53,11 +54,15 @@ The workflow in `.github/workflows/ryanair-daily.yml` runs once per day and also
 supports manual dispatch. It:
 
 1. Installs Chrome + dependencies.
-2. Runs the scraper.
+2. Reads `data/flight_dates.csv` and runs the scraper for each line.
 3. Uploads logs/screenshots as artifacts.
 4. Commits updated CSV data back to the repo.
 
 If you want a different schedule, update the cron expression in the workflow.
+
+To change the queried routes and dates, edit `data/flight_dates.csv` with a
+header row of `origin,destination,depart_date,return_date` and one or more
+route/date pairs below it.
 
 ## Notes on selectors
 

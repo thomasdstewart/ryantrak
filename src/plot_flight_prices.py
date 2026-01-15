@@ -68,7 +68,7 @@ def build_charts(config: PlotConfig) -> list[Path]:
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
         fig.autofmt_xdate()
 
-        filename = "__".join(
+        filename = "_".join(
             [
                 _slugify(origin),
                 _slugify(destination),

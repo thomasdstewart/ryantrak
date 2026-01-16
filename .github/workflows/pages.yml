@@ -1,0 +1,96 @@
+name: Publish charts to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/pages.yml"
+      - "data/charts/**"
+      - "data/flight_prices.csv"
+      - "src/plot_flight_prices.py"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build chart index
+        run: |
+          mkdir -p site/charts
+          if [ -d data/charts ]; then
+            cp data/charts/*.png site/charts/ 2>/dev/null || true
+          fi
+          python - <<'PY'
+          from pathlib import Path
+
+          charts_dir = Path("site/charts")
+          charts = sorted(charts_dir.glob("*.png"))
+          items = "\n".join(
+              f"""
+              <li>
+                <a href="charts/{chart.name}">
+                  <img src="charts/{chart.name}" alt="{chart.stem}" loading="lazy">
+                </a>
+                <p>{chart.stem}</p>
+              </li>
+              """.strip()
+              for chart in charts
+          )
+          html = f"""<!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Ryanair Price Charts</title>
+              <style>
+                body {{ font-family: Arial, sans-serif; margin: 2rem; }}
+                ul {{ list-style: none; padding: 0; display: grid; gap: 1.5rem;
+                     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }}
+                li {{ border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }}
+                img {{ max-width: 100%; height: auto; display: block; }}
+                p {{ margin: 0.75rem 0 0; word-break: break-word; }}
+              </style>
+            </head>
+            <body>
+              <h1>Ryanair Price Charts</h1>
+              <p>Generated charts from data/charts.</p>
+              <ul>
+                {items if items else '<li>No charts available yet.</li>'}
+              </ul>
+            </body>
+          </html>
+          """
+          Path("site/index.html").write_text(html, encoding="utf-8")
+          PY
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

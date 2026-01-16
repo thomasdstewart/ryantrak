@@ -32,7 +32,6 @@ CSV_HEADERS = [
     "arrival_date",
     "price",
     "currency",
-    "status",
 ]
 
 
@@ -40,8 +39,8 @@ CSV_HEADERS = [
 class SearchConfig:
     origin: str
     destination: str
-    depart_date: str
-    return_date: str
+    date_out: str
+    date_return: str
     adults: int = 1
     currency: str = "GBP"
 
@@ -56,8 +55,8 @@ class SearchConfig:
             f"&teens=0&children=0&infants=0"
             f"&originIata={self.origin}"
             f"&destinationIata={self.destination}"
-            f"&dateOut={self.depart_date}"
-            f"&dateIn={self.return_date}"
+            f"&dateOut={self.date_out}"
+            f"&dateIn={self.date_return}"
             f"&isReturn=true&flexdaysBeforeOut=0&flexdaysOut=0"
             f"&flexdaysBeforeIn=0&flexdaysIn=0"
             f"&roundTrip=true&discount=0"
@@ -70,10 +69,9 @@ class SearchConfig:
 @dataclass(frozen=True)
 class FlightOption:
     price: Optional[str]
-    depart_time: str
-    return_time: str
+    departure_time: str
+    arrival_time: str
     currency: str
-    status: str
     flight_date: str
 
 
@@ -262,11 +260,10 @@ class RyanairScraper:
             return [
                 FlightOption(
                     price=None,
-                    depart_time="",
-                    return_time="",
+                    departure_time="",
+                    arrival_time="",
                     currency=config.currency,
-                    status="timeout",
-                    flight_date=config.depart_date,
+                    flight_date=config.date_out,
                 )
             ]
 
@@ -309,11 +306,10 @@ class RyanairScraper:
                 return [
                     FlightOption(
                         price=price_text or None,
-                        depart_time="",
-                        return_time="",
+                        departure_time="",
+                        arrival_time="",
                         currency=config.currency,
-                        status="ok" if price_text else "missing-price",
-                        flight_date=config.depart_date,
+                        flight_date=config.date_out,
                     )
                 ]
 
@@ -325,17 +321,15 @@ class RyanairScraper:
                         self._extract_element_text(card)
                     )
                 time_texts = self._extract_times(card, time_selectors)
-                depart_time = time_texts[0] if len(time_texts) > 0 else ""
-                return_time = time_texts[1] if len(time_texts) > 1 else ""
-                status = "ok" if price_text else "missing-price"
+                departure_time = time_texts[0] if len(time_texts) > 0 else ""
+                arrival_time = time_texts[1] if len(time_texts) > 1 else ""
                 options.append(
                     FlightOption(
                         price=price_text or None,
-                        depart_time=depart_time,
-                        return_time=return_time,
+                        departure_time=departure_time,
+                        arrival_time=arrival_time,
                         currency=config.currency,
-                        status=status,
-                        flight_date=config.depart_date,
+                        flight_date=config.date_out,
                     )
                 )
             if len(options) > 1 and len(options) % 2 == 0:
@@ -349,12 +343,11 @@ class RyanairScraper:
                 options = [
                     FlightOption(
                         price=option.price,
-                        depart_time=option.depart_time,
-                        return_time=option.return_time,
+                        departure_time=option.departure_time,
+                        arrival_time=option.arrival_time,
                         currency=option.currency,
-                        status=option.status,
                         flight_date=(
-                            config.depart_date if idx < midpoint else config.return_date
+                            config.date_out if idx < midpoint else config.date_return
                         ),
                     )
                     for idx, option in enumerate(options)
@@ -367,11 +360,10 @@ class RyanairScraper:
             return [
                 FlightOption(
                     price=None,
-                    depart_time="",
-                    return_time="",
+                    departure_time="",
+                    arrival_time="",
                     currency=config.currency,
-                    status="missing-price",
-                    flight_date=config.depart_date,
+                    flight_date=config.date_out,
                 )
             ]
         except WebDriverException:
@@ -380,11 +372,10 @@ class RyanairScraper:
             return [
                 FlightOption(
                     price=None,
-                    depart_time="",
-                    return_time="",
+                    departure_time="",
+                    arrival_time="",
                     currency=config.currency,
-                    status="webdriver-error",
-                    flight_date=config.depart_date,
+                    flight_date=config.date_out,
                 )
             ]
 
@@ -422,8 +413,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Track Ryanair return flight prices.")
     parser.add_argument("--origin", default="STN", help="Origin airport IATA code")
     parser.add_argument("--destination", default="BGY", help="Destination IATA code")
-    parser.add_argument("--depart-date", default="2026-08-22", help="Departure date")
-    parser.add_argument("--return-date", default="2026-09-04", help="Return date")
+    parser.add_argument("--date-out", default="2026-08-22", help="Departure date")
+    parser.add_argument("--date-return", default="2026-09-04", help="Return date")
     parser.add_argument("--currency", default="GBP", help="Currency to display")
     parser.add_argument(
         "--csv-path", default="data/flight_prices.csv", help="CSV output path"
@@ -450,8 +441,8 @@ def main() -> int:
     config = SearchConfig(
         origin=args.origin,
         destination=args.destination,
-        depart_date=args.depart_date,
-        return_date=args.return_date,
+        date_out=args.date_out,
+        date_return=args.date_return,
         currency=args.currency,
     )
 
@@ -463,7 +454,7 @@ def main() -> int:
     try:
         flights = scraper.fetch_return_flights(config)
         for flight in flights:
-            is_return_leg = flight.flight_date == config.return_date
+            is_return_leg = flight.flight_date == config.date_return
             origin = config.destination if is_return_leg else config.origin
             destination = config.origin if is_return_leg else config.destination
             row = {
@@ -471,14 +462,13 @@ def main() -> int:
                 "origin": origin,
                 "destination": destination,
                 "departure_date": format_flight_datetime(
-                    flight.flight_date, flight.depart_time
+                    flight.flight_date, flight.departure_time
                 ),
                 "arrival_date": format_flight_datetime(
-                    flight.flight_date, flight.return_time
+                    flight.flight_date, flight.arrival_time
                 ),
                 "price": flight.price or "",
                 "currency": flight.currency,
-                "status": flight.status,
             }
             append_csv(Path(args.csv_path), row)
         logging.info("Appended %s rows to %s", len(flights), args.csv_path)

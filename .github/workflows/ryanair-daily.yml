@@ -31,18 +31,18 @@ jobs:
       - name: Run scraper
         run: |
           dates_csv="data/flight_dates.csv"
-          tail -n +2 "$dates_csv" | while IFS=, read -r origin destination depart_date return_date; do
-            if [[ -z "$origin" || -z "$destination" || -z "$depart_date" || -z "$return_date" ]]; then
-              echo "Skipping invalid row: $origin,$destination,$depart_date,$return_date"
+          tail -n +2 "$dates_csv" | while IFS=, read -r origin destination date_out date_return; do
+            if [[ -z "$origin" || -z "$destination" || -z "$date_out" || -z "$date_return" ]]; then
+              echo "Skipping invalid row: $origin,$destination,$date_out,$date_return"
               continue
             fi
-            echo "Running scrape for $origin -> $destination ($depart_date -> $return_date)"
+            echo "Running scrape for $origin -> $destination ($date_out -> $date_return)"
             python src/ryanair_scraper.py \
               --headless \
               --origin "$origin" \
               --destination "$destination" \
-              --depart-date "$depart_date" \
-              --return-date "$return_date" \
+              --date-out "$date_out" \
+              --date-return "$date_return" \
               --currency GBP \
               --csv-path data/flight_prices.csv \
               --log-path logs/ryanair_scrape.log \

@@ -5,7 +5,6 @@ on:
   push:
     paths:
       - ".github/workflows/pages.yml"
-      - "data/charts/**"
       - "data/flight_prices.csv"
       - "src/plot_flight_prices.py"
   workflow_run:
@@ -48,14 +47,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Generate charts
-        run: python src/plot_flight_prices.py --csv-path data/flight_prices.csv --output-dir data/charts
+        run: python src/plot_flight_prices.py --csv-path data/flight_prices.csv --output-dir site/charts
 
       - name: Build chart index
         run: |
-          mkdir -p site/charts
-          if [ -d data/charts ]; then
-            cp data/charts/*.png site/charts/ 2>/dev/null || true
-          fi
           python - <<'PY'
           from pathlib import Path
 
@@ -89,7 +84,7 @@ jobs:
             </head>
             <body>
               <h1>Ryanair Price Charts</h1>
-              <p>Generated charts from data/charts.</p>
+              <p>Generated charts from site/charts.</p>
               <ul>
                 {items if items else '<li>No charts available yet.</li>'}
               </ul>

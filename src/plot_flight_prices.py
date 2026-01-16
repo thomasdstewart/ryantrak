@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate flight price charts from CSV history.
 
-Outputs one PNG per unique (origin, destination, depart_date) series.
+Outputs one PNG per unique (origin, destination, departure_date) series.
 """
 
 from __future__ import annotations
@@ -46,6 +46,7 @@ def build_charts(config: PlotConfig) -> list[Path]:
         return []
 
     df = df.copy()
+    config.output_dir.mkdir(parents=True, exist_ok=True)
     df["capture_date"] = pd.to_datetime(df["timestamp_utc"], errors="coerce")
     df["price_value"] = df["price"].apply(_parse_price)
     df = df.dropna(subset=["capture_date", "price_value"])
@@ -55,13 +56,13 @@ def build_charts(config: PlotConfig) -> list[Path]:
     df = df.sort_values("capture_date")
 
     output_paths: list[Path] = []
-    group_columns = ["origin", "destination", "depart_date"]
-    for (origin, destination, depart_date), group in df.groupby(group_columns):
+    group_columns = ["origin", "destination", "departure_date"]
+    for (origin, destination, departure_date), group in df.groupby(group_columns):
         if group.empty:
             continue
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(group["capture_date"], group["price_value"], marker="o")
-        ax.set_title(f"{origin} → {destination} ({depart_date})")
+        ax.set_title(f"{origin} → {destination} ({departure_date})")
         ax.set_xlabel("Capture date")
         ax.set_ylabel(f"Price ({config.currency})")
         ax.grid(True, linestyle="--", alpha=0.5)
@@ -72,7 +73,7 @@ def build_charts(config: PlotConfig) -> list[Path]:
             [
                 _slugify(origin),
                 _slugify(destination),
-                _slugify(depart_date),
+                _slugify(departure_date),
             ]
         )
         output_path = config.output_dir / f"{filename}.png"
@@ -96,7 +97,7 @@ def main() -> None:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("data/charts"),
+        default=Path("site/charts"),
         help="Directory to write PNG charts.",
     )
     parser.add_argument(

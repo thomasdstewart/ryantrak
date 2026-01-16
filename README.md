@@ -38,8 +38,8 @@ python src/ryanair_scraper.py --headless
 python src/ryanair_scraper.py \
   --origin STN \
   --destination BGY \
-  --depart-date 2024-08-22 \
-  --return-date 2024-09-04 \
+  --date-out 2024-08-22 \
+  --date-return 2024-09-04 \
   --currency GBP \
   --csv-path data/flight_prices.csv \
   --log-path logs/ryanair_scrape.log \
@@ -61,7 +61,7 @@ supports manual dispatch. It:
 If you want a different schedule, update the cron expression in the workflow.
 
 To change the queried routes and dates, edit `data/flight_dates.csv` with a
-header row of `origin,destination,depart_date,return_date` and one or more
+header row of `origin,destination,date_out,date_return` and one or more
 route/date pairs below it.
 
 ## Notes on selectors
@@ -79,7 +79,7 @@ Once the CSV accumulates entries, you can graph it with pandas or a notebook
 
 The `src/plot_flight_prices.py` script converts `data/flight_prices.csv` into
 PNG charts (one per unique origin/destination/departure time). The daily GitHub
-Actions workflow runs it and saves images under `data/charts` so you can
+Actions workflow runs it and saves images under `site/charts` so you can
 inspect price changes over time without hosting a server.
 
 Run it locally:
@@ -87,5 +87,5 @@ Run it locally:
 ```bash
 python src/plot_flight_prices.py \
   --csv-path data/flight_prices.csv \
-  --output-dir data/charts
+  --output-dir site/charts
 ```

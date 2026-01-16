@@ -18,8 +18,8 @@ def test_search_url_contains_expected_params() -> None:
     config = SearchConfig(
         origin="STN",
         destination="BGY",
-        depart_date="2024-08-22",
-        return_date="2024-09-04",
+        date_out="2024-08-22",
+        date_return="2024-09-04",
         adults=2,
         currency="EUR",
     )
@@ -67,7 +67,6 @@ def test_append_csv_writes_header_once(tmp_path: Path) -> None:
             "arrival_date": "2024-08-22T08:45",
             "price": "£123.45",
             "currency": "GBP",
-            "status": "ok",
         },
     )
     append_csv(
@@ -80,7 +79,6 @@ def test_append_csv_writes_header_once(tmp_path: Path) -> None:
             "arrival_date": "2024-08-22T14:25",
             "price": "£156.00",
             "currency": "GBP",
-            "status": "ok",
         },
     )
 

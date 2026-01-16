@@ -8,6 +8,10 @@ on:
       - "data/charts/**"
       - "data/flight_prices.csv"
       - "src/plot_flight_prices.py"
+  workflow_run:
+    workflows: ["Daily Ryanair price scrape"]
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -20,7 +24,9 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: |
+      (github.event_name != 'workflow_run' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

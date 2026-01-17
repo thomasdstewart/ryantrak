@@ -41,7 +41,14 @@
               {{ $destination := index $parts 1 }}
               {{ $date := index $parts 2 }}
               {{ $route := printf "%s → %s" $origin $destination }}
-              <figure class="chart-card" data-route="{{ $route }}" data-date="{{ $date }}">
+              <figure
+                class="chart-card"
+                data-route="{{ $route }}"
+                data-date="{{ $date }}"
+                role="button"
+                tabindex="0"
+                aria-label="Expand chart for {{ $route }} on {{ $date }}"
+              >
                 <img
                   src="{{ printf "charts/%s" .Name | relURL }}"
                   alt="Flight price chart for {{ $route }} ({{ $date }})"
@@ -63,6 +70,17 @@
         <p>Generated from the daily scraper output.</p>
       </div>
     </footer>
+
+    <div class="chart-modal" id="chart-modal" aria-hidden="true">
+      <div class="chart-modal__backdrop" data-modal-close></div>
+      <div class="chart-modal__content" role="dialog" aria-modal="true">
+        <button class="chart-modal__close" type="button" data-modal-close aria-label="Close expanded chart">
+          ×
+        </button>
+        <img class="chart-modal__image" alt="" />
+        <div class="chart-modal__caption" id="chart-modal-caption"></div>
+      </div>
+    </div>
 
     <script src="{{ "js/charts.js" | relURL }}"></script>
   </body>

@@ -78,14 +78,23 @@ Once the CSV accumulates entries, you can graph it with pandas or a notebook
 ## Generating charts in CI
 
 The `src/plot_flight_prices.py` script converts `data/flight_prices.csv` into
-PNG charts (one per unique origin/destination/departure time). The daily GitHub
-Actions workflow runs it and saves images under `site/charts` so you can
-inspect price changes over time without hosting a server.
+PNG charts (one per unique origin/destination/departure time). Save images under
+`site/static/charts` so the Hugo site can surface them.
 
 Run it locally:
 
 ```bash
 python src/plot_flight_prices.py \
   --csv-path data/flight_prices.csv \
-  --output-dir site/charts
+  --output-dir site/static/charts
+```
+
+## Hugo dashboard
+
+The `site/` directory is a Hugo project with a simple theme and a route filter
+dropdown. Generate charts, then preview locally:
+
+```bash
+python src/plot_flight_prices.py --csv-path data/flight_prices.csv --output-dir site/static/charts
+hugo server --source site
 ```

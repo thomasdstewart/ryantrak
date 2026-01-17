@@ -1,0 +1,8 @@
+baseURL = "https://example.com/"
+languageCode = "en-us"
+title = "Ryanair Price Tracker"
+theme = "simple"
+
+[params]
+  chartsTitle = "Flight Price Charts"
+  chartsSubtitle = "Track how Ryanair prices change over time."

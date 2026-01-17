@@ -97,7 +97,7 @@ def main() -> None:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("site/charts"),
+        default=Path("site/static/charts"),
         help="Directory to write PNG charts.",
     )
     parser.add_argument(

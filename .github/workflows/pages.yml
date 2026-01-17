@@ -1,4 +1,4 @@
-name: Publish charts to GitHub Pages
+name: Publish Hugo site to GitHub Pages
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - ".github/workflows/pages.yml"
       - "data/flight_prices.csv"
       - "src/plot_flight_prices.py"
+      - "site/**"
   workflow_run:
     workflows: ["Daily Ryanair price scrape"]
     types:
@@ -29,12 +30,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Set up Hugo
+        uses: actions/setup-hugo@v3
+        with:
+          hugo-version: "latest"
+          extended: true
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -47,57 +54,15 @@ jobs:
           pip install -r requirements.txt
 
       - name: Generate charts
-        run: python src/plot_flight_prices.py --csv-path data/flight_prices.csv --output-dir site/charts
+        run: python src/plot_flight_prices.py --csv-path data/flight_prices.csv --output-dir site/static/charts
 
-      - name: Build chart index
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          charts_dir = Path("site/charts")
-          charts = sorted(charts_dir.glob("*.png"))
-          items = "\n".join(
-              f"""
-              <li>
-                <a href="charts/{chart.name}">
-                  <img src="charts/{chart.name}" alt="{chart.stem}" loading="lazy">
-                </a>
-                <p>{chart.stem}</p>
-              </li>
-              """.strip()
-              for chart in charts
-          )
-          html = f"""<!DOCTYPE html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Ryanair Price Charts</title>
-              <style>
-                body {{ font-family: Arial, sans-serif; margin: 2rem; }}
-                ul {{ list-style: none; padding: 0; display: grid; gap: 1.5rem;
-                     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }}
-                li {{ border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }}
-                img {{ max-width: 100%; height: auto; display: block; }}
-                p {{ margin: 0.75rem 0 0; word-break: break-word; }}
-              </style>
-            </head>
-            <body>
-              <h1>Ryanair Price Charts</h1>
-              <p>Generated charts from site/charts.</p>
-              <ul>
-                {items if items else '<li>No charts available yet.</li>'}
-              </ul>
-            </body>
-          </html>
-          """
-          Path("site/index.html").write_text(html, encoding="utf-8")
-          PY
+      - name: Build Hugo site
+        run: hugo --source site --destination public
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: public
 
   deploy:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)

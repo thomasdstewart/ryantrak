@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="{{ "css/main.css" | relURL }}" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="container">
+        <p class="eyebrow">Ryanair Price Tracker</p>
+        <h1>{{ .Site.Params.chartsTitle }}</h1>
+        <p class="subtitle">{{ .Site.Params.chartsSubtitle }}</p>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="controls">
+        <div>
+          <label for="route-filter">Filter by route</label>
+          <select id="route-filter" class="select"></select>
+        </div>
+        <div class="status" id="chart-status" aria-live="polite"></div>
+      </section>
+
+      <section class="grid" id="chart-grid">
+        {{ $charts := readDir "static/charts" }}
+        {{ if not $charts }}
+          <p class="empty">No charts found yet. Run the chart generator to populate /site/static/charts.</p>
+        {{ else }}
+          {{ range sort $charts "Name" "asc" }}
+            {{ if hasSuffix .Name ".png" }}
+              {{ $name := replace .Name ".png" "" }}
+              {{ $parts := split $name "_" }}
+              {{ $origin := index $parts 0 }}
+              {{ $destination := index $parts 1 }}
+              {{ $date := index $parts 2 }}
+              {{ $route := printf "%s → %s" $origin $destination }}
+              <figure class="chart-card" data-route="{{ $route }}" data-date="{{ $date }}">
+                <img
+                  src="{{ printf "charts/%s" .Name | relURL }}"
+                  alt="Flight price chart for {{ $route }} ({{ $date }})"
+                  loading="lazy"
+                />
+                <figcaption>
+                  <span class="route">{{ $route }}</span>
+                  <span class="date">{{ $date }}</span>
+                </figcaption>
+              </figure>
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>Generated from the daily scraper output.</p>
+      </div>
+    </footer>
+
+    <script src="{{ "js/charts.js" | relURL }}"></script>
+  </body>
+</html>

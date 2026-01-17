@@ -1,4 +1,4 @@
-baseURL = "https://example.com/"
+baseURL = "https://thomasdstewart.github.io/ryantrak/"
 languageCode = "en-us"
 title = "Ryanair Price Tracker"
 theme = "simple"

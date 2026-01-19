@@ -1,4 +1,4 @@
-name: Publish Hugo site to GitHub Pages
+name: Pages
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       - "src/plot_flight_prices.py"
       - "site/**"
   workflow_run:
-    workflows: ["Daily Ryanair price scrape"]
+    workflows: ["Scrape"]
     types:
       - completed
 
